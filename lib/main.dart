@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:mobilapp/anasayfa.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'screens/login_screen.dart';
 
-void main(List<String> args) {
-  runApp(MyApp());
+void main() {
+  WidgetsFlutterBinding.ensureInitialized();
+  runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
@@ -11,18 +13,14 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      title: 'Modern Todo App',
       debugShowCheckedModeBanner: false,
-      home: MyHome(),
+      theme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+        useMaterial3: true,
+        textTheme: GoogleFonts.poppinsTextTheme(),
+      ),
+      home: const LoginScreen(),
     );
-  }
-}
-
-
-class MyHome extends StatelessWidget {
-  const MyHome({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Anasayfa();
   }
 }
