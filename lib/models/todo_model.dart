@@ -6,6 +6,7 @@ class Todo {
   final int userId;
   final DateTime? dueDate;
   final bool notificationEnabled;
+  final String? imagePath;
 
   Todo({
     this.id,
@@ -15,6 +16,7 @@ class Todo {
     required this.userId,
     this.dueDate,
     this.notificationEnabled = false,
+    this.imagePath,
   });
 
   Map<String, dynamic> toMap() {
@@ -26,6 +28,7 @@ class Todo {
       'userId': userId,
       'dueDate': dueDate?.toIso8601String(),
       'notificationEnabled': notificationEnabled ? 1 : 0,
+      'imagePath': imagePath,
     };
   }
 
@@ -38,6 +41,7 @@ class Todo {
       userId: map['userId'],
       dueDate: map['dueDate'] != null ? DateTime.parse(map['dueDate']) : null,
       notificationEnabled: map['notificationEnabled'] == 1,
+      imagePath: map['imagePath'],
     );
   }
 }

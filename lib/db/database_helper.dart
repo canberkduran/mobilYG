@@ -19,7 +19,18 @@ class DatabaseHelper {
     final dbPath = await getDatabasesPath();
     final path = join(dbPath, filePath);
 
-    return await openDatabase(path, version: 1, onCreate: _createDB);
+    return await openDatabase(
+      path,
+      version: 2,
+      onCreate: _createDB,
+      onUpgrade: _onUpgrade,
+    );
+  }
+
+  Future _onUpgrade(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion < 2) {
+      await db.execute('ALTER TABLE todos ADD COLUMN imagePath TEXT');
+    }
   }
 
   Future _createDB(Database db, int version) async {
@@ -38,8 +49,6 @@ class DatabaseHelper {
       description TEXT NOT NULL,
       isCompleted INTEGER NOT NULL,
       userId INTEGER NOT NULL,
-      dueDate TEXT,
-      notificationEnabled INTEGER DEFAULT 0,
       FOREIGN KEY (userId) REFERENCES users (id) ON DELETE CASCADE
     )
     ''';

@@ -39,8 +39,9 @@ dependencies:
   google_fonts: ^6.3.3
   intl: ^0.20.2
   provider: ^6.1.5+1
-  flutter_local_notifications: ^16.3.2
-  timezone: ^0.9.3
+  flutter_local_notifications: ^18.0.0
+  timezone: ^0.10.0
+  image_picker: ^1.2.1
 
 dev_dependencies:
   flutter_test:

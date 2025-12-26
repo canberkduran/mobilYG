@@ -1,5 +1,7 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import '../db/database_helper.dart';
 import '../models/todo_model.dart';
@@ -20,6 +22,18 @@ class _AddTodoScreenState extends State<AddTodoScreen> {
   final _descriptionController = TextEditingController();
   DateTime? _selectedDueDate;
   bool _notificationEnabled = false;
+  String? _imagePath;
+
+  Future<void> _pickImage() async {
+    final picker = ImagePicker();
+    final pickedFile = await picker.pickImage(source: ImageSource.camera);
+
+    if (pickedFile != null) {
+      setState(() {
+        _imagePath = pickedFile.path;
+      });
+    }
+  }
 
   Future<void> _selectDate(BuildContext context) async {
     final DateTime? picked = await showDatePicker(
@@ -43,14 +57,16 @@ class _AddTodoScreenState extends State<AddTodoScreen> {
         userId: widget.userId,
         dueDate: _selectedDueDate,
         notificationEnabled: _notificationEnabled,
+        imagePath: _imagePath,
       );
 
       final todoId = await DatabaseHelper.instance.createTodo(todo);
 
       if (_notificationEnabled && _selectedDueDate != null) {
         // Schedule notification 1 day before due date
-        final notificationTime =
-            _selectedDueDate!.subtract(const Duration(days: 1));
+        final notificationTime = _selectedDueDate!.subtract(
+          const Duration(days: 1),
+        );
         if (notificationTime.isAfter(DateTime.now())) {
           await NotificationService().scheduleNotification(
             id: todoId.hashCode,
@@ -135,8 +151,7 @@ class _AddTodoScreenState extends State<AddTodoScreen> {
                   if (_selectedDueDate != null)
                     CheckboxListTile(
                       title: const Text('Enable Notification Reminder'),
-                      subtitle:
-                          const Text('You will be notified 1 day before'),
+                      subtitle: const Text('You will be notified 1 day before'),
                       value: _notificationEnabled,
                       onChanged: (bool? value) {
                         setState(() {
@@ -144,6 +159,42 @@ class _AddTodoScreenState extends State<AddTodoScreen> {
                         });
                       },
                       contentPadding: EdgeInsets.zero,
+                    ),
+                  const SizedBox(height: 16),
+                  if (_imagePath != null)
+                    Stack(
+                      alignment: Alignment.topRight,
+                      children: [
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(12),
+                          child: Image.file(
+                            File(_imagePath!),
+                            height: 200,
+                            width: double.infinity,
+                            fit: BoxFit.cover,
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close, color: Colors.red),
+                          onPressed: () {
+                            setState(() {
+                              _imagePath = null;
+                            });
+                          },
+                        ),
+                      ],
+                    ),
+                  if (_imagePath == null)
+                    OutlinedButton.icon(
+                      icon: const Icon(Icons.camera_alt),
+                      label: const Text('Take Photo'),
+                      onPressed: _pickImage,
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
                     ),
                   const SizedBox(height: 24),
                   ElevatedButton(

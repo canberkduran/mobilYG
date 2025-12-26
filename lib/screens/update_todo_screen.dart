@@ -1,5 +1,7 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import '../db/database_helper.dart';
 import '../models/todo_model.dart';
@@ -20,6 +22,7 @@ class _UpdateTodoScreenState extends State<UpdateTodoScreen> {
   late TextEditingController _descriptionController;
   late DateTime? _selectedDueDate;
   late bool _notificationEnabled;
+  String? _imagePath;
 
   @override
   void initState() {
@@ -30,6 +33,18 @@ class _UpdateTodoScreenState extends State<UpdateTodoScreen> {
     );
     _selectedDueDate = widget.todo.dueDate;
     _notificationEnabled = widget.todo.notificationEnabled;
+    _imagePath = widget.todo.imagePath;
+  }
+
+  Future<void> _pickImage() async {
+    final picker = ImagePicker();
+    final pickedFile = await picker.pickImage(source: ImageSource.camera);
+
+    if (pickedFile != null) {
+      setState(() {
+        _imagePath = pickedFile.path;
+      });
+    }
   }
 
   Future<void> _selectDate(BuildContext context) async {
@@ -56,18 +71,21 @@ class _UpdateTodoScreenState extends State<UpdateTodoScreen> {
         userId: widget.todo.userId,
         dueDate: _selectedDueDate,
         notificationEnabled: _notificationEnabled,
+        imagePath: _imagePath,
       );
 
       // Cancel old notification if it exists
       if (widget.todo.id != null) {
-        await NotificationService()
-            .cancelNotification(widget.todo.id!.hashCode);
+        await NotificationService().cancelNotification(
+          widget.todo.id!.hashCode,
+        );
       }
 
       // Schedule new notification if enabled
       if (_notificationEnabled && _selectedDueDate != null) {
-        final notificationTime =
-            _selectedDueDate!.subtract(const Duration(days: 1));
+        final notificationTime = _selectedDueDate!.subtract(
+          const Duration(days: 1),
+        );
         if (notificationTime.isAfter(DateTime.now())) {
           await NotificationService().scheduleNotification(
             id: updatedTodo.id!.hashCode,
@@ -87,8 +105,7 @@ class _UpdateTodoScreenState extends State<UpdateTodoScreen> {
   void _deleteTodo() async {
     // Cancel notification if it exists
     if (widget.todo.id != null) {
-      await NotificationService()
-          .cancelNotification(widget.todo.id!.hashCode);
+      await NotificationService().cancelNotification(widget.todo.id!.hashCode);
     }
     await DatabaseHelper.instance.deleteTodo(widget.todo.id!);
     if (!mounted) return;
@@ -196,8 +213,7 @@ class _UpdateTodoScreenState extends State<UpdateTodoScreen> {
                   if (_selectedDueDate != null)
                     CheckboxListTile(
                       title: const Text('Enable Notification Reminder'),
-                      subtitle:
-                          const Text('You will be notified 1 day before'),
+                      subtitle: const Text('You will be notified 1 day before'),
                       value: _notificationEnabled,
                       onChanged: (bool? value) {
                         setState(() {
@@ -205,6 +221,42 @@ class _UpdateTodoScreenState extends State<UpdateTodoScreen> {
                         });
                       },
                       contentPadding: EdgeInsets.zero,
+                    ),
+                  const SizedBox(height: 16),
+                  if (_imagePath != null)
+                    Stack(
+                      alignment: Alignment.topRight,
+                      children: [
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(12),
+                          child: Image.file(
+                            File(_imagePath!),
+                            height: 200,
+                            width: double.infinity,
+                            fit: BoxFit.cover,
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close, color: Colors.red),
+                          onPressed: () {
+                            setState(() {
+                              _imagePath = null;
+                            });
+                          },
+                        ),
+                      ],
+                    ),
+                  if (_imagePath == null)
+                    OutlinedButton.icon(
+                      icon: const Icon(Icons.camera_alt),
+                      label: const Text('Take Photo'),
+                      onPressed: _pickImage,
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
                     ),
                   const SizedBox(height: 24),
                   ElevatedButton(
