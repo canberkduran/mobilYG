@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart';
 import '../db/database_helper.dart';
 import '../models/todo_model.dart';
+import '../services/notification_service.dart';
 
 class UpdateTodoScreen extends StatefulWidget {
   final Todo todo;
@@ -16,6 +18,8 @@ class _UpdateTodoScreenState extends State<UpdateTodoScreen> {
   final _formKey = GlobalKey<FormState>();
   late TextEditingController _titleController;
   late TextEditingController _descriptionController;
+  late DateTime? _selectedDueDate;
+  late bool _notificationEnabled;
 
   @override
   void initState() {
@@ -24,6 +28,22 @@ class _UpdateTodoScreenState extends State<UpdateTodoScreen> {
     _descriptionController = TextEditingController(
       text: widget.todo.description,
     );
+    _selectedDueDate = widget.todo.dueDate;
+    _notificationEnabled = widget.todo.notificationEnabled;
+  }
+
+  Future<void> _selectDate(BuildContext context) async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedDueDate ?? DateTime.now(),
+      firstDate: DateTime.now(),
+      lastDate: DateTime(2099),
+    );
+    if (picked != null && picked != _selectedDueDate) {
+      setState(() {
+        _selectedDueDate = picked;
+      });
+    }
   }
 
   void _updateTodo() async {
@@ -34,7 +54,29 @@ class _UpdateTodoScreenState extends State<UpdateTodoScreen> {
         description: _descriptionController.text,
         isCompleted: widget.todo.isCompleted,
         userId: widget.todo.userId,
+        dueDate: _selectedDueDate,
+        notificationEnabled: _notificationEnabled,
       );
+
+      // Cancel old notification if it exists
+      if (widget.todo.id != null) {
+        await NotificationService()
+            .cancelNotification(widget.todo.id!.hashCode);
+      }
+
+      // Schedule new notification if enabled
+      if (_notificationEnabled && _selectedDueDate != null) {
+        final notificationTime =
+            _selectedDueDate!.subtract(const Duration(days: 1));
+        if (notificationTime.isAfter(DateTime.now())) {
+          await NotificationService().scheduleNotification(
+            id: updatedTodo.id!.hashCode,
+            title: 'Todo Reminder',
+            body: '${updatedTodo.title} is due tomorrow!',
+            scheduledDate: notificationTime,
+          );
+        }
+      }
 
       await DatabaseHelper.instance.updateTodo(updatedTodo);
       if (!mounted) return;
@@ -43,6 +85,11 @@ class _UpdateTodoScreenState extends State<UpdateTodoScreen> {
   }
 
   void _deleteTodo() async {
+    // Cancel notification if it exists
+    if (widget.todo.id != null) {
+      await NotificationService()
+          .cancelNotification(widget.todo.id!.hashCode);
+    }
     await DatabaseHelper.instance.deleteTodo(widget.todo.id!);
     if (!mounted) return;
     Navigator.pop(context);
@@ -51,7 +98,6 @@ class _UpdateTodoScreenState extends State<UpdateTodoScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[100],
       appBar: AppBar(
         title: Text(
           'Update Todo',
@@ -130,6 +176,36 @@ class _UpdateTodoScreenState extends State<UpdateTodoScreen> {
                     validator: (value) =>
                         value!.isEmpty ? 'Please enter a description' : null,
                   ),
+                  const SizedBox(height: 16),
+                  OutlinedButton.icon(
+                    icon: const Icon(Icons.calendar_today),
+                    label: Text(
+                      _selectedDueDate == null
+                          ? 'Select Due Date'
+                          : 'Due: ${DateFormat('dd/MM/yyyy').format(_selectedDueDate!)}',
+                    ),
+                    onPressed: () => _selectDate(context),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  if (_selectedDueDate != null)
+                    CheckboxListTile(
+                      title: const Text('Enable Notification Reminder'),
+                      subtitle:
+                          const Text('You will be notified 1 day before'),
+                      value: _notificationEnabled,
+                      onChanged: (bool? value) {
+                        setState(() {
+                          _notificationEnabled = value ?? false;
+                        });
+                      },
+                      contentPadding: EdgeInsets.zero,
+                    ),
                   const SizedBox(height: 24),
                   ElevatedButton(
                     onPressed: _updateTodo,
@@ -156,5 +232,12 @@ class _UpdateTodoScreenState extends State<UpdateTodoScreen> {
         ),
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    _titleController.dispose();
+    _descriptionController.dispose();
+    super.dispose();
   }
 }
