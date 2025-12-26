@@ -38,6 +38,9 @@ dependencies:
   path: ^1.9.1
   google_fonts: ^6.3.3
   intl: ^0.20.2
+  provider: ^6.1.5+1
+  flutter_local_notifications: ^16.3.2
+  timezone: ^0.9.3
 
 dev_dependencies:
   flutter_test:

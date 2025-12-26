@@ -38,6 +38,8 @@ class DatabaseHelper {
       description TEXT NOT NULL,
       isCompleted INTEGER NOT NULL,
       userId INTEGER NOT NULL,
+      dueDate TEXT,
+      notificationEnabled INTEGER DEFAULT 0,
       FOREIGN KEY (userId) REFERENCES users (id) ON DELETE CASCADE
     )
     ''';
