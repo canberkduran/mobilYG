@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 import '../db/database_helper.dart';
 import '../models/todo_model.dart';
 import '../models/user_model.dart';
+import '../providers/theme_provider.dart';
 import 'add_todo_screen.dart';
 import 'update_todo_screen.dart';
 import 'login_screen.dart';
@@ -40,8 +43,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDarkMode = context.watch<ThemeProvider>().isDarkMode;
+
     return Scaffold(
-      backgroundColor: Colors.grey[100],
       appBar: AppBar(
         title: Text(
           'My Todos',
@@ -50,6 +54,12 @@ class _HomeScreenState extends State<HomeScreen> {
         backgroundColor: Colors.deepPurple,
         foregroundColor: Colors.white,
         actions: [
+          IconButton(
+            icon: Icon(isDarkMode ? Icons.light_mode : Icons.dark_mode),
+            onPressed: () {
+              context.read<ThemeProvider>().toggleTheme();
+            },
+          ),
           IconButton(icon: const Icon(Icons.logout), onPressed: _logout),
         ],
       ),
@@ -78,12 +88,25 @@ class _HomeScreenState extends State<HomeScreen> {
             itemCount: todos.length,
             itemBuilder: (context, index) {
               final todo = todos[index];
+              final isOverdue = todo.dueDate != null &&
+                  todo.dueDate!.isBefore(DateTime.now()) &&
+                  !todo.isCompleted;
+              final isDueSoon = todo.dueDate != null &&
+                  todo.dueDate!.difference(DateTime.now()).inDays <= 1 &&
+                  todo.dueDate!.isAfter(DateTime.now()) &&
+                  !todo.isCompleted;
+
               return Card(
                 elevation: 4,
                 margin: const EdgeInsets.only(bottom: 16),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
+                color: isOverdue
+                    ? Colors.red.withValues(alpha: 0.1)
+                    : isDueSoon
+                        ? Colors.orange.withValues(alpha: 0.1)
+                        : null,
                 child: ListTile(
                   contentPadding: const EdgeInsets.all(16),
                   title: Text(
@@ -96,14 +119,68 @@ class _HomeScreenState extends State<HomeScreen> {
                           : null,
                     ),
                   ),
-                  subtitle: Text(
-                    todo.description,
-                    style: GoogleFonts.poppins(
-                      color: Colors.grey[600],
-                      decoration: todo.isCompleted
-                          ? TextDecoration.lineThrough
-                          : null,
-                    ),
+                  subtitle: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const SizedBox(height: 8),
+                      Text(
+                        todo.description,
+                        style: GoogleFonts.poppins(
+                          color: Colors.grey[600],
+                          decoration: todo.isCompleted
+                              ? TextDecoration.lineThrough
+                              : null,
+                        ),
+                      ),
+                      if (todo.dueDate != null) ...[
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            const Icon(Icons.calendar_today,
+                                size: 16, color: Colors.deepPurple),
+                            const SizedBox(width: 8),
+                            Text(
+                              DateFormat('dd/MM/yyyy').format(todo.dueDate!),
+                              style: GoogleFonts.poppins(
+                                fontSize: 14,
+                                color: isOverdue
+                                    ? Colors.red
+                                    : isDueSoon
+                                        ? Colors.orange
+                                        : Colors.grey[600],
+                                fontWeight: isOverdue || isDueSoon
+                                    ? FontWeight.w600
+                                    : FontWeight.normal,
+                              ),
+                            ),
+                            if (isOverdue)
+                              const Padding(
+                                padding: EdgeInsets.only(left: 8),
+                                child: Text(
+                                  'OVERDUE',
+                                  style: TextStyle(
+                                    color: Colors.red,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ),
+                            if (isDueSoon && !isOverdue)
+                              const Padding(
+                                padding: EdgeInsets.only(left: 8),
+                                child: Text(
+                                  'DUE SOON',
+                                  style: TextStyle(
+                                    color: Colors.orange,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                      ],
+                    ],
                   ),
                   trailing: Checkbox(
                     value: todo.isCompleted,
@@ -115,6 +192,8 @@ class _HomeScreenState extends State<HomeScreen> {
                         description: todo.description,
                         isCompleted: value!,
                         userId: todo.userId,
+                        dueDate: todo.dueDate,
+                        notificationEnabled: todo.notificationEnabled,
                       );
                       await DatabaseHelper.instance.updateTodo(updatedTodo);
                       _refreshTodos();

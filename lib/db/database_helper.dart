@@ -49,12 +49,6 @@ class DatabaseHelper {
       description TEXT NOT NULL,
       isCompleted INTEGER NOT NULL,
       userId INTEGER NOT NULL,
-<<<<<<< Updated upstream
-=======
-      dueDate TEXT,
-      notificationEnabled INTEGER DEFAULT 0,
-      imagePath TEXT,
->>>>>>> Stashed changes
       FOREIGN KEY (userId) REFERENCES users (id) ON DELETE CASCADE
     )
     ''';
