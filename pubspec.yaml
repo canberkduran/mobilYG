@@ -38,13 +38,10 @@ dependencies:
   path: ^1.9.1
   google_fonts: ^6.3.3
   intl: ^0.20.2
-<<<<<<< Updated upstream
-=======
   provider: ^6.1.5+1
   flutter_local_notifications: ^18.0.0
   timezone: ^0.10.0
   image_picker: ^1.2.1
->>>>>>> Stashed changes
 
 dev_dependencies:
   flutter_test:
