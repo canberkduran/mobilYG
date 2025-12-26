@@ -21,7 +21,7 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 2,
+      version: 4,
       onCreate: _createDB,
       onUpgrade: _onUpgrade,
     );
@@ -30,6 +30,19 @@ class DatabaseHelper {
   Future _onUpgrade(Database db, int oldVersion, int newVersion) async {
     if (oldVersion < 2) {
       await db.execute('ALTER TABLE todos ADD COLUMN imagePath TEXT');
+    }
+    if (oldVersion < 3) {
+      await db.execute('ALTER TABLE todos ADD COLUMN dueDate TEXT');
+      await db.execute(
+        'ALTER TABLE todos ADD COLUMN notificationEnabled INTEGER',
+      );
+    }
+    if (oldVersion < 4) {
+      final columns = await db.rawQuery('PRAGMA table_info(todos)');
+      final hasImagePath = columns.any((col) => col['name'] == 'imagePath');
+      if (!hasImagePath) {
+        await db.execute('ALTER TABLE todos ADD COLUMN imagePath TEXT');
+      }
     }
   }
 
@@ -49,6 +62,9 @@ class DatabaseHelper {
       description TEXT NOT NULL,
       isCompleted INTEGER NOT NULL,
       userId INTEGER NOT NULL,
+      dueDate TEXT,
+      notificationEnabled INTEGER,
+      imagePath TEXT,
       FOREIGN KEY (userId) REFERENCES users (id) ON DELETE CASCADE
     )
     ''';
